@@ -1,0 +1,125 @@
+#include "lexer.h"
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+static const char *keywords[] = {
+    "int", "return", "if", "else", "while", "for", "void", NULL
+};
+
+static int is_keyword(const char *str) {
+    for (int i = 0; keywords[i]; i++) {
+        if (strcmp(str, keywords[i]) == 0) return 1;
+    }
+    return 0;
+}
+
+void lexer_init(Lexer *lexer, const char *source) {
+    lexer->source = source;
+    lexer->pos = 0;
+    lexer->length = strlen(source);
+    lexer->line = 1;
+    lexer->column = 1;
+}
+
+static char peek(Lexer *lexer) {
+    if (lexer->pos >= lexer->length) return '\0';
+    return lexer->source[lexer->pos];
+}
+
+static char advance(Lexer *lexer) {
+    if (lexer->pos >= lexer->length) return '\0';
+    char c = lexer->source[lexer->pos++];
+    if (c == '\n') {
+        lexer->line++;
+        lexer->column = 1;
+    } else {
+        lexer->column++;
+    }
+    return c;
+}
+
+static void skip_whitespace(Lexer *lexer) {
+    while (isspace(peek(lexer))) {
+        advance(lexer);
+    }
+}
+
+static Token make_token(TokenType type, const char *value, int line, int col) {
+    Token token;
+    token.type = type;
+    token.value = strdup(value);
+    token.line = line;
+    token.column = col;
+    return token;
+}
+
+Token lexer_next_token(Lexer *lexer) {
+    skip_whitespace(lexer);
+    
+    int start_line = lexer->line;
+    int start_col = lexer->column;
+    
+    char c = peek(lexer);
+    
+    if (c == '\0') {
+        return make_token(TOKEN_EOF, "", start_line, start_col);
+    }
+    
+    // Numbers
+    if (isdigit(c)) {
+        size_t start = lexer->pos;
+        while (isdigit(peek(lexer))) advance(lexer);
+        size_t len = lexer->pos - start;
+        char *num = strndup(&lexer->source[start], len);
+        Token token = make_token(TOKEN_NUMBER, num, start_line, start_col);
+        free(num);
+        return token;
+    }
+    
+    // Identifiers and keywords
+    if (isalpha(c) || c == '_') {
+        size_t start = lexer->pos;
+        while (isalnum(peek(lexer)) || peek(lexer) == '_') advance(lexer);
+        size_t len = lexer->pos - start;
+        char *word = strndup(&lexer->source[start], len);
+        TokenType type = is_keyword(word) ? TOKEN_KEYWORD : TOKEN_IDENTIFIER;
+        Token token = make_token(type, word, start_line, start_col);
+        free(word);
+        return token;
+    }
+    
+    // Operators and separators
+    advance(lexer);
+    char str[2] = {c, '\0'};
+    
+    if (strchr("+-*/=<>!", c)) {
+        return make_token(TOKEN_OPERATOR, str, start_line, start_col);
+    }
+    
+    if (strchr("(){};,", c)) {
+        return make_token(TOKEN_SEPARATOR, str, start_line, start_col);
+    }
+    
+    return make_token(TOKEN_UNKNOWN, str, start_line, start_col);
+}
+
+void token_free(Token *token) {
+    if (token->value) {
+        free(token->value);
+        token->value = NULL;
+    }
+}
+
+const char* token_type_str(TokenType type) {
+    switch (type) {
+        case TOKEN_EOF: return "EOF";
+        case TOKEN_KEYWORD: return "KEYWORD";
+        case TOKEN_IDENTIFIER: return "IDENTIFIER";
+        case TOKEN_NUMBER: return "NUMBER";
+        case TOKEN_OPERATOR: return "OPERATOR";
+        case TOKEN_SEPARATOR: return "SEPARATOR";
+        case TOKEN_UNKNOWN: return "UNKNOWN";
+        default: return "???";
+    }
+}
