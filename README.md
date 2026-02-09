@@ -3,7 +3,7 @@
 A minimal C compiler written in C. Educational project.
 
 ## Status
-🚧 In development - starting with lexer
+In development - lexer complete, parser next
 
 ## Goals
 - Tokenize C source code (lexer)
