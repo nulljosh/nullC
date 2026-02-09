@@ -66,10 +66,11 @@
 - Recognize keywords, identifiers, numbers, operators
 - Handle whitespace and newlines
 
-### Phase 2: Parser (Next)
+### Phase 2: Parser [IN PROGRESS]
 - Build Abstract Syntax Tree (AST)
 - Handle expressions, statements, declarations
 - Operator precedence
+- **Status**: Levels 0-2 working (hello, arithmetic, variables)
 
 ### Phase 3: Semantic Analysis
 - Type checking
