@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -Isrc
-SRC = src/main.c src/lexer.c
+SRC = src/main.c src/lexer.c src/parser.c src/ast.c
 TARGET = nullc
 
 all: $(TARGET)

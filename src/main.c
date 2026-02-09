@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "lexer.h"
+#include "parser.h"
+#include "ast.h"
 
 char* read_file(const char *filename) {
     FILE *f = fopen(filename, "rb");
@@ -30,25 +32,36 @@ int main(int argc, char **argv) {
     char *source = read_file(argv[1]);
     if (!source) return 1;
     
-    printf("=== Tokenizing: %s ===\n\n", argv[1]);
-    
+    // Tokenize
     Lexer lexer;
     lexer_init(&lexer, source);
+    
+    Token tokens[1000];  // Fixed buffer for now
+    int token_count = 0;
     
     Token token;
     do {
         token = lexer_next_token(&lexer);
-        printf("[%d:%d] %-12s '%s'\n", 
-               token.line, token.column,
-               token_type_str(token.type), 
-               token.value);
-        
-        if (token.type != TOKEN_EOF) {
-            token_free(&token);
-        }
-    } while (token.type != TOKEN_EOF);
+        tokens[token_count++] = token;
+    } while (token.type != TOKEN_EOF && token_count < 1000);
     
-    token_free(&token);
+    // Parse
+    printf("=== Parsing: %s ===\n\n", argv[1]);
+    
+    Parser parser;
+    parser_init(&parser, tokens, token_count);
+    
+    ASTNode *ast = parse_program(&parser);
+    
+    // Print AST
+    printf("=== AST ===\n\n");
+    ast_print(ast, 0);
+    
+    // Cleanup
+    ast_free(ast);
+    for (int i = 0; i < token_count; i++) {
+        token_free(&tokens[i]);
+    }
     free(source);
     
     return 0;

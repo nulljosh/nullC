@@ -39,9 +39,44 @@ static char advance(Lexer *lexer) {
     return c;
 }
 
-static void skip_whitespace(Lexer *lexer) {
-    while (isspace(peek(lexer))) {
-        advance(lexer);
+static void skip_whitespace_and_comments(Lexer *lexer) {
+    while (1) {
+        while (isspace(peek(lexer))) {
+            advance(lexer);
+        }
+        
+        // Check for comments
+        if (peek(lexer) == '/' && lexer->pos + 1 < lexer->length) {
+            char next = lexer->source[lexer->pos + 1];
+            
+            // Line comment //
+            if (next == '/') {
+                advance(lexer);  // /
+                advance(lexer);  // /
+                while (peek(lexer) != '\n' && peek(lexer) != '\0') {
+                    advance(lexer);
+                }
+                continue;
+            }
+            
+            // Block comment /* */
+            if (next == '*') {
+                advance(lexer);  // /
+                advance(lexer);  // *
+                while (!(peek(lexer) == '*' && lexer->pos + 1 < lexer->length && 
+                         lexer->source[lexer->pos + 1] == '/')) {
+                    if (peek(lexer) == '\0') break;
+                    advance(lexer);
+                }
+                if (peek(lexer) == '*') {
+                    advance(lexer);  // *
+                    advance(lexer);  // /
+                }
+                continue;
+            }
+        }
+        
+        break;
     }
 }
 
@@ -55,7 +90,7 @@ static Token make_token(TokenType type, const char *value, int line, int col) {
 }
 
 Token lexer_next_token(Lexer *lexer) {
-    skip_whitespace(lexer);
+    skip_whitespace_and_comments(lexer);
     
     int start_line = lexer->line;
     int start_col = lexer->column;
