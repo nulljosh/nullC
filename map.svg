@@ -61,11 +61,11 @@
   
   <!-- Complexity Levels -->
   <rect x="50" y="350" width="700" height="200" class="phase" rx="5"/>
-  <text x="400" y="375" class="text" text-anchor="middle" font-weight="bold">10 Complexity Levels</text>
+  <text x="400" y="375" class="text" text-anchor="middle" font-weight="bold">10 Complexity Levels (see BENCHMARKS.md)</text>
   
-  <text x="70" y="405" class="text">L0: Hello World</text>
-  <text x="70" y="425" class="text">L1: Arithmetic</text>
-  <text x="70" y="445" class="text">L2: Variables</text>
+  <text x="70" y="405" class="text" fill="#4a7c2d">L0: Hello World [DONE]</text>
+  <text x="70" y="425" class="text" fill="#4a7c2d">L1: Arithmetic [DONE]</text>
+  <text x="70" y="445" class="text" fill="#4a7c2d">L2: Variables [DONE]</text>
   <text x="70" y="465" class="text">L3: Conditionals</text>
   <text x="70" y="485" class="text">L4: Loops</text>
   
@@ -78,6 +78,8 @@
   <text x="470" y="405" class="text" font-weight="bold">L10: Meta-Compiler</text>
   <text x="470" y="425" class="text" font-size="11">Tokenizer in C</text>
   <text x="470" y="440" class="text" font-size="11">Expression evaluator</text>
-  <text x="470" y="455" class="text" font-size="11">Compiler writing</text>
-  <text x="470" y="470" class="text" font-size="11">a compiler!</text>
+  <text x="470" y="455" class="text" font-size="11">Self-hosting test</text>
+  
+  <!-- Real-World Targets -->
+  <text x="70" y="515" class="text" font-size="12" fill="#6b6b6b">Real-world: TCP server, HTTP parser, nullC compiles itself</text>
 </svg>
