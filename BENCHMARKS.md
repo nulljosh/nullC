@@ -6,7 +6,7 @@
 - **Level 0**: Hello World (return 0)
 - **Level 1**: Arithmetic (+-*/)
 - **Level 2**: Variables and expressions
-- **Status**: Parser working ✓
+- **Status**: Parser working 
 
 ### Tier 2: Control Flow
 - **Level 3**: If/else conditionals
