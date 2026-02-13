@@ -5,25 +5,34 @@ A minimal C compiler written in C. Educational project.
 ![Project Map](map.svg)
 
 ## Status
-In development - lexer complete, parser in progress (levels 0-2 working)
+**Working:** Lexer, parser, codegen all functional
 
-## Goals
-- Tokenize C source code (lexer)
-- Parse into AST (parser)
-- Generate x86-64 assembly (codegen)
-- Compile simple C programs
+**Test Results (ARM64):**
+- ✓ Level 0-7: Basic programs through recursion and pointers
+- ✗ Level 8: Structs (in progress)
+- ✓ Level 9-10: Strings and meta-compiler
+
+**Compilation Pipeline:**
+C source → Lexer → Parser → AST → ARM64 Assembly → Binary
 
 ## Build
 ```bash
 make
-./nullc examples/hello.c
+./nullc examples/level0_hello.c
+./level0_hello  # Run compiled binary
+echo $?         # Check exit code
+```
+
+## Test All Levels
+```bash
+for f in examples/level*.c; do
+  ./nullc "$f" && ./${f%.c} && echo "Exit: $?"
+done
 ```
 
 ## Documentation
 - [ROADMAP.md](ROADMAP.md) - Development phases
-- [BENCHMARKS.md](BENCHMARKS.md) - Complexity tiers & goals
-- [AGENTS.md](AGENTS.md) - AI development guide
-- [CLAUDE.md](CLAUDE.md) - Milestones & conventions
+- [CLAUDE.md](CLAUDE.md) - Development notes
 
 ## Author
 Joshua Trommel (nulljosh)
