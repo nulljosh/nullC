@@ -2,15 +2,15 @@
 
 .globl _main
 _main:
-    pushq %rbp
-    movq %rsp, %rbp
-    subq $16, %rsp
-    movq $0, %rax
-    movq %rbp, %rsp
-    popq %rbp
-    retq
-    movq $0, %rax
-    movq %rbp, %rsp
-    popq %rbp
-    retq
+    stp x29, x30, [sp, #-16]!
+    mov x29, sp
+    sub sp, sp, #16
+    mov x0, #0
+    mov sp, x29
+    ldp x29, x30, [sp], #16
+    ret
+    mov x0, #0
+    mov sp, x29
+    ldp x29, x30, [sp], #16
+    ret
 

@@ -289,7 +289,7 @@ static void codegen_lvalue(CodeGen *cg, ASTNode *node) {
                         node->data.identifier.name);
                 exit(1);
             }
-            emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+            emit(cg, "    leaq %d(%%rbp), %%rax", cg->locals[li].offset);
             break;
         }
 
@@ -305,7 +305,7 @@ static void codegen_lvalue(CodeGen *cg, ASTNode *node) {
                 if (li >= 0 && cg->locals[li].array_size >= 0) {
                     // Array local: offset points to first element.
                     // Load the address of element 0.
-                    emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+                    emit(cg, "    leaq %d(%%rbp), %%rax", cg->locals[li].offset);
                 } else {
                     // Pointer local: load the pointer value
                     codegen_expr(cg, arr);
@@ -316,15 +316,15 @@ static void codegen_lvalue(CodeGen *cg, ASTNode *node) {
             }
 
             // Save base address
-            emit(cg, "    str x0, [sp, #-16]!");
+            emit(cg, "    pushq %%rax");
 
             // Evaluate index
             codegen_expr(cg, idx);
 
             // rax = index, compute address = base + index * 8
-            emit(cg, "    lsl x0, x0, #3");
-            emit(cg, "    ldr x9, [sp], #16");
-emit(cg, "    add x0, x0, x9");
+            emit(cg, "    imulq $8, %%rax");
+            emit(cg, "    popq %%rdi");
+            emit(cg, "    addq %%rdi, %%rax");
             break;
         }
 
@@ -343,7 +343,7 @@ emit(cg, "    add x0, x0, x9");
 
             // Add field offset
             if (offset != 0) {
-                emit(cg, "    add x0, x0, #%d", offset);
+                emit(cg, "    addq $%d, %%rax", offset);
             }
             break;
         }
@@ -373,22 +373,22 @@ emit(cg, "    add x0, x0, x9");
 static void codegen_expr(CodeGen *cg, ASTNode *node) {
     if (!node) {
         // Null expression (e.g. void return) — just zero rax
-        emit(cg, "    mov x0, #0");
+        emit(cg, "    movq $0, %%rax");
         return;
     }
 
     switch (node->type) {
         case AST_NUMBER:
-            emit(cg, "    mov x0, #%d", node->data.number.value);
+            emit(cg, "    movq $%d, %%rax", node->data.number.value);
             break;
 
         case AST_CHAR_LIT:
-            emit(cg, "    mov x0, #%d", (int)(unsigned char)node->data.char_lit.value);
+            emit(cg, "    movq $%d, %%rax", (int)(unsigned char)node->data.char_lit.value);
             break;
 
         case AST_STRING: {
             int lbl = register_string(cg, node->data.string_lit.value);
-            emit(cg, "    add x0, x29, .str%d(%)", lbl);
+            emit(cg, "    leaq .str%d(%%rip), %%rax", lbl);
             break;
         }
 
@@ -396,7 +396,7 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
             // Check if it's an enum value first
             int ev = find_enum_value(cg, node->data.identifier.name);
             if (ev >= 0) {
-                emit(cg, "    mov x0, #%d", ev);
+                emit(cg, "    movq $%d, %%rax", ev);
                 break;
             }
 
@@ -409,15 +409,15 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
 
             // If it's an array, return the address of the first element
             if (cg->locals[li].array_size >= 0) {
-                emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+                emit(cg, "    leaq %d(%%rbp), %%rax", cg->locals[li].offset);
             }
             // If it's a struct value, return the address (structs are passed by address)
             else if (local_is_struct_value(cg, li)) {
-                emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+                emit(cg, "    leaq %d(%%rbp), %%rax", cg->locals[li].offset);
             }
             else {
                 // Normal scalar: load value
-                emit(cg, "    mov %d(x29), x0", cg->locals[li].offset);
+                emit(cg, "    movq %d(%%rbp), %%rax", cg->locals[li].offset);
             }
             break;
         }
@@ -431,17 +431,17 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
                 int lbl_end = new_label(cg);
 
                 codegen_expr(cg, node->data.binary_op.left);
-                emit(cg, "    cmp x0, #0");
-                emit(cg, "    b.eq .L%d", lbl_false);
+                emit(cg, "    cmpq $0, %%rax");
+                emit(cg, "    je .L%d", lbl_false);
 
                 codegen_expr(cg, node->data.binary_op.right);
-                emit(cg, "    cmp x0, #0");
-                emit(cg, "    b.eq .L%d", lbl_false);
+                emit(cg, "    cmpq $0, %%rax");
+                emit(cg, "    je .L%d", lbl_false);
 
-                emit(cg, "    mov x0, #1");
-                emit(cg, "    b .L%d", lbl_end);
+                emit(cg, "    movq $1, %%rax");
+                emit(cg, "    jmp .L%d", lbl_end);
                 emit(cg, ".L%d:", lbl_false);
-                emit(cg, "    mov x0, #0");
+                emit(cg, "    movq $0, %%rax");
                 emit(cg, ".L%d:", lbl_end);
                 break;
             }
@@ -452,85 +452,85 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
                 int lbl_end = new_label(cg);
 
                 codegen_expr(cg, node->data.binary_op.left);
-                emit(cg, "    cmp x0, #0");
-                emit(cg, "    b.ne .L%d", lbl_true);
+                emit(cg, "    cmpq $0, %%rax");
+                emit(cg, "    jne .L%d", lbl_true);
 
                 codegen_expr(cg, node->data.binary_op.right);
-                emit(cg, "    cmp x0, #0");
-                emit(cg, "    b.ne .L%d", lbl_true);
+                emit(cg, "    cmpq $0, %%rax");
+                emit(cg, "    jne .L%d", lbl_true);
 
-                emit(cg, "    mov x0, #0");
-                emit(cg, "    b .L%d", lbl_end);
+                emit(cg, "    movq $0, %%rax");
+                emit(cg, "    jmp .L%d", lbl_end);
                 emit(cg, ".L%d:", lbl_true);
-                emit(cg, "    mov x0, #1");
+                emit(cg, "    movq $1, %%rax");
                 emit(cg, ".L%d:", lbl_end);
                 break;
             }
 
             // General binary ops: eval left, push, eval right, pop left into rdi
             codegen_expr(cg, node->data.binary_op.left);
-            emit(cg, "    str x0, [sp, #-16]!");
+            emit(cg, "    pushq %%rax");
             codegen_expr(cg, node->data.binary_op.right);
-            emit(cg, "    ldr x9, [sp], #16");
+            emit(cg, "    popq %%rdi");
             // Now: left in %rdi, right in %rax
 
             if (strcmp(op, "+") == 0) {
-emit(cg, "    add x0, x0, x9");
+                emit(cg, "    addq %%rdi, %%rax");
             }
             else if (strcmp(op, "-") == 0) {
                 // left - right: rdi - rax
-                emit(cg, "    sub x0, x9");
-                emit(cg, "    mov x9, x0");
+                emit(cg, "    subq %%rax, %%rdi");
+                emit(cg, "    movq %%rdi, %%rax");
             }
             else if (strcmp(op, "*") == 0) {
-                emit(cg, "    mul x9, x0");
+                emit(cg, "    imulq %%rdi, %%rax");
             }
             else if (strcmp(op, "/") == 0) {
                 // left / right: rdi / rax
                 // dividend in rax, divisor in rcx
-                emit(cg, "    mov x0, x12");    // right (divisor) -> rcx
-                emit(cg, "    mov x9, x0");    // left (dividend) -> rax
-                emit(cg, "    // cqto (ARM: use sdiv directly)");                  // sign extend rax -> rdx:rax
-                emit(cg, "    sdiv x0, x0, x12");           // rax = quotient
+                emit(cg, "    movq %%rax, %%rcx");    // right (divisor) -> rcx
+                emit(cg, "    movq %%rdi, %%rax");    // left (dividend) -> rax
+                emit(cg, "    cqto");                  // sign extend rax -> rdx:rax
+                emit(cg, "    idivq %%rcx");           // rax = quotient
             }
             else if (strcmp(op, "%") == 0) {
                 // left % right: remainder in rdx after idiv
-                emit(cg, "    mov x0, x12");
-                emit(cg, "    mov x9, x0");
-                emit(cg, "    // cqto (ARM: use sdiv directly)");
-                emit(cg, "    sdiv x0, x0, x12");
-                emit(cg, "    mov x11, x0");     // remainder
+                emit(cg, "    movq %%rax, %%rcx");
+                emit(cg, "    movq %%rdi, %%rax");
+                emit(cg, "    cqto");
+                emit(cg, "    idivq %%rcx");
+                emit(cg, "    movq %%rdx, %%rax");     // remainder
             }
             else if (strcmp(op, "==") == 0) {
-                emit(cg, "    cmp x0, x9");
+                emit(cg, "    cmpq %%rax, %%rdi");
                 emit(cg, "    sete %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    movzbq %%al, %%rax");
             }
             else if (strcmp(op, "!=") == 0) {
-                emit(cg, "    cmp x0, x9");
+                emit(cg, "    cmpq %%rax, %%rdi");
                 emit(cg, "    setne %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    movzbq %%al, %%rax");
             }
             else if (strcmp(op, "<") == 0) {
                 // left < right: rdi < rax
-                emit(cg, "    cmp x0, x9");
+                emit(cg, "    cmpq %%rax, %%rdi");
                 emit(cg, "    setl %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    movzbq %%al, %%rax");
             }
             else if (strcmp(op, ">") == 0) {
-                emit(cg, "    cmp x0, x9");
+                emit(cg, "    cmpq %%rax, %%rdi");
                 emit(cg, "    setg %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    movzbq %%al, %%rax");
             }
             else if (strcmp(op, "<=") == 0) {
-                emit(cg, "    cmp x0, x9");
+                emit(cg, "    cmpq %%rax, %%rdi");
                 emit(cg, "    setle %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    movzbq %%al, %%rax");
             }
             else if (strcmp(op, ">=") == 0) {
-                emit(cg, "    cmp x0, x9");
+                emit(cg, "    cmpq %%rax, %%rdi");
                 emit(cg, "    setge %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    movzbq %%al, %%rax");
             }
             else {
                 fprintf(stderr, "codegen error: unknown binary op '%s'\n", op);
@@ -543,13 +543,13 @@ emit(cg, "    add x0, x0, x9");
             char op = node->data.unary_op.op;
             if (op == '-') {
                 codegen_expr(cg, node->data.unary_op.operand);
-                emit(cg, "    neg x0, x0");
+                emit(cg, "    negq %%rax");
             }
             else if (op == '!') {
                 codegen_expr(cg, node->data.unary_op.operand);
-                emit(cg, "    cmp x0, #0");
+                emit(cg, "    cmpq $0, %%rax");
                 emit(cg, "    sete %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    movzbq %%al, %%rax");
             }
             else if (op == '&') {
                 // Address-of: get lvalue address
@@ -558,7 +558,7 @@ emit(cg, "    add x0, x0, x9");
             else if (op == '*') {
                 // Dereference: evaluate pointer, then load from that address
                 codegen_expr(cg, node->data.unary_op.operand);
-                emit(cg, "    mov (x0), x0");
+                emit(cg, "    movq (%%rax), %%rax");
             }
             else {
                 fprintf(stderr, "codegen error: unknown unary op '%c'\n", op);
@@ -587,14 +587,14 @@ emit(cg, "    add x0, x0, x9");
 
             for (int i = 0; i < argc; i++) {
                 codegen_expr(cg, node->data.call.args[i]);
-                emit(cg, "    str x0, [sp, #-16]!");
+                emit(cg, "    pushq %%rax");
             }
 
             // Pop arguments into registers (first 6)
             // We pushed left-to-right, so we pop right-to-left into the correct regs
             for (int i = argc - 1; i >= 0; i--) {
                 if (i < 6) {
-                    emit(cg, "    ldr %s", arg_regs[i]);
+                    emit(cg, "    popq %s", arg_regs[i]);
                 } else {
                     // Args beyond 6 stay on stack — but we pushed them already.
                     // Actually, for SysV ABI, args beyond 6 go on the stack in
@@ -603,19 +603,19 @@ emit(cg, "    add x0, x0, x9");
                     // For simplicity (and since our examples use <= 6 args), just pop
                     // and discard the excess; they'll be on the stack in wrong order.
                     // TODO: handle >6 args properly if needed.
-                    emit(cg, "    ldr x0, [sp], #16");
+                    emit(cg, "    popq %%rax");
                 }
             }
 
             // Ensure 16-byte stack alignment before call.
-            // After our prologue's str %rbp, rsp is 16-byte aligned if we entered
-            // aligned. Our sub for locals is aligned to 16. Each str/ldr pair
+            // After our prologue's pushq %rbp, rsp is 16-byte aligned if we entered
+            // aligned. Our subq for locals is aligned to 16. Each pushq/popq pair
             // we've done above should be balanced. So we should be aligned here.
             // If we have an odd number of pushes on the stack (from nested expressions),
             // we could be misaligned. We handle this by noting that after all pops above,
             // the stack should be back where it was.
 
-            emit(cg, "    bl _%s", fname);
+            emit(cg, "    callq _%s", fname);
 
             // Result is in %rax already
             break;
@@ -624,7 +624,7 @@ emit(cg, "    add x0, x0, x9");
         case AST_INDEX: {
             // array[index] — compute address, then load value
             codegen_lvalue(cg, node);
-            emit(cg, "    mov (x0), x0");
+            emit(cg, "    movq (%%rax), %%rax");
             break;
         }
 
@@ -641,7 +641,7 @@ emit(cg, "    add x0, x0, x9");
                 // Leave address in rax (struct value — caller will use as address)
             } else {
                 // Scalar field — load the value
-                emit(cg, "    mov (x0), x0");
+                emit(cg, "    movq (%%rax), %%rax");
             }
             break;
         }
@@ -664,12 +664,12 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
             if (node->data.return_stmt.value) {
                 codegen_expr(cg, node->data.return_stmt.value);
             } else {
-                emit(cg, "    mov x0, #0");
+                emit(cg, "    movq $0, %%rax");
             }
             // Epilogue
-            emit(cg, "    mov sp, x29");
-    emit(cg, "    ldp x29, x30, [sp], #16");
-    emit(cg, "    ret");
+            emit(cg, "    movq %%rbp, %%rsp");
+            emit(cg, "    popq %%rbp");
+            emit(cg, "    retq");
             break;
         }
 
@@ -678,12 +678,12 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
             int lbl_end = new_label(cg);
 
             codegen_expr(cg, node->data.if_stmt.condition);
-            emit(cg, "    cmp x0, #0");
+            emit(cg, "    cmpq $0, %%rax");
 
             if (node->data.if_stmt.else_body) {
-                emit(cg, "    b.eq .L%d", lbl_else);
+                emit(cg, "    je .L%d", lbl_else);
             } else {
-                emit(cg, "    b.eq .L%d", lbl_end);
+                emit(cg, "    je .L%d", lbl_end);
             }
 
             // Then body
@@ -693,7 +693,7 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
                 codegen_stmt(cg, node->data.if_stmt.then_body);
 
             if (node->data.if_stmt.else_body) {
-                emit(cg, "    b .L%d", lbl_end);
+                emit(cg, "    jmp .L%d", lbl_end);
                 emit(cg, ".L%d:", lbl_else);
 
                 ASTNode *eb = node->data.if_stmt.else_body;
@@ -718,15 +718,15 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
 
             emit(cg, ".L%d:", lbl_start);
             codegen_expr(cg, node->data.while_stmt.condition);
-            emit(cg, "    cmp x0, #0");
-            emit(cg, "    b.eq .L%d", lbl_end);
+            emit(cg, "    cmpq $0, %%rax");
+            emit(cg, "    je .L%d", lbl_end);
 
             if (node->data.while_stmt.body->type == AST_BLOCK)
                 codegen_block(cg, node->data.while_stmt.body);
             else
                 codegen_stmt(cg, node->data.while_stmt.body);
 
-            emit(cg, "    b .L%d", lbl_start);
+            emit(cg, "    jmp .L%d", lbl_start);
             emit(cg, ".L%d:", lbl_end);
 
             cg->break_depth--;
@@ -749,8 +749,8 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
             // Condition
             if (node->data.for_stmt.condition) {
                 codegen_expr(cg, node->data.for_stmt.condition);
-                emit(cg, "    cmp x0, #0");
-                emit(cg, "    b.eq .L%d", lbl_end);
+                emit(cg, "    cmpq $0, %%rax");
+                emit(cg, "    je .L%d", lbl_end);
             }
 
             // Body
@@ -763,7 +763,7 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
             if (node->data.for_stmt.update)
                 codegen_stmt(cg, node->data.for_stmt.update);
 
-            emit(cg, "    b .L%d", lbl_start);
+            emit(cg, "    jmp .L%d", lbl_start);
             emit(cg, ".L%d:", lbl_end);
 
             cg->break_depth--;
@@ -775,7 +775,7 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
                 fprintf(stderr, "codegen error: break outside of loop\n");
                 exit(1);
             }
-            emit(cg, "    b .L%d", cg->break_labels[cg->break_depth - 1]);
+            emit(cg, "    jmp .L%d", cg->break_labels[cg->break_depth - 1]);
             break;
         }
 
@@ -809,10 +809,10 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
                     // Struct initialization: not handled via simple assignment
                     // (structs don't have direct initializers in our examples)
                     codegen_expr(cg, init);
-                    emit(cg, "    mov x0, %d(x29)", cg->locals[li].offset);
+                    emit(cg, "    movq %%rax, %d(%%rbp)", cg->locals[li].offset);
                 } else {
                     codegen_expr(cg, init);
-                    emit(cg, "    mov x0, %d(x29)", cg->locals[li].offset);
+                    emit(cg, "    movq %%rax, %d(%%rbp)", cg->locals[li].offset);
                 }
             }
             break;
@@ -824,14 +824,14 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
 
             // Evaluate the address of the target
             codegen_lvalue(cg, target);
-            emit(cg, "    str x0, [sp, #-16]!");
+            emit(cg, "    pushq %%rax");
 
             // Evaluate the value
             codegen_expr(cg, value);
 
             // Store value at target address
-            emit(cg, "    ldr x9, [sp], #16");
-            emit(cg, "    mov x0, (x9)");
+            emit(cg, "    popq %%rdi");
+            emit(cg, "    movq %%rax, (%%rdi)");
             break;
         }
 
@@ -1026,9 +1026,9 @@ static void codegen_function(CodeGen *cg, ASTNode *node) {
     emit(cg, "_%s:", fname);
 
     // Prologue
-    emit(cg, "    stp x29, x30, [sp, #-16]!");
-    emit(cg, "    mov x29, sp");
-    emit(cg, "    sub sp, sp, #%d", total_stack);
+    emit(cg, "    pushq %%rbp");
+    emit(cg, "    movq %%rsp, %%rbp");
+    emit(cg, "    subq $%d, %%rsp", total_stack);
 
     // Copy parameters from registers to stack slots
     for (int i = 0; i < param_count; i++) {
@@ -1052,15 +1052,15 @@ static void codegen_function(CodeGen *cg, ASTNode *node) {
                 // Use a loop to copy 8 bytes at a time
                 int nfields = ssz / 8;
                 for (int f = 0; f < nfields; f++) {
-                    emit(cg, "    mov %d(%s), x0", f * 8, arg_regs[i]);
-                    emit(cg, "    mov x0, %d(x29)", cg->locals[li].offset + f * 8);
+                    emit(cg, "    movq %d(%s), %%rax", f * 8, arg_regs[i]);
+                    emit(cg, "    movq %%rax, %d(%%rbp)", cg->locals[li].offset + f * 8);
                 }
             }
         } else {
             // Scalar parameter
             int li = add_local(cg, pname, ptype, pptr, parray, 8);
             if (i < 6) {
-                emit(cg, "    mov %s, %d(x29)", arg_regs[i], cg->locals[li].offset);
+                emit(cg, "    movq %s, %d(%%rbp)", arg_regs[i], cg->locals[li].offset);
             }
             // TODO: handle args beyond 6 (read from stack above rbp)
         }
@@ -1071,10 +1071,10 @@ static void codegen_function(CodeGen *cg, ASTNode *node) {
 
     // If the function might fall through without a return, emit an implicit return 0.
     // (Covers void functions and functions where control might reach end.)
-    emit(cg, "    mov x0, #0");
-    emit(cg, "    mov sp, x29");
-    emit(cg, "    ldp x29, x30, [sp], #16");
-    emit(cg, "    ret");
+    emit(cg, "    movq $0, %%rax");
+    emit(cg, "    movq %%rbp, %%rsp");
+    emit(cg, "    popq %%rbp");
+    emit(cg, "    retq");
     emit(cg, "");
 }
 
