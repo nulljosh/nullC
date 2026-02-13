@@ -582,7 +582,7 @@ emit(cg, "    add x0, x0, x9");
             // We pushed left-to-right, so we pop right-to-left into the correct regs
             for (int i = argc - 1; i >= 0; i--) {
                 if (i < 6) {
-                    emit(cg, "    ldr %s", arg_regs[i]);
+                    emit(cg, "    ldr %s, [sp], #16", arg_regs[i]);
                 } else {
                     // Args beyond 6 stay on stack — but we pushed them already.
                     // Actually, for SysV ABI, args beyond 6 go on the stack in
