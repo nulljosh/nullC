@@ -417,7 +417,7 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
             }
             else {
                 // Normal scalar: load value
-                emit(cg, "    mov %d(x29), x0", cg->locals[li].offset);
+                emit(cg, "    ldr x0, [x29, #%d]", cg->locals[li].offset);
             }
             break;
         }
@@ -479,11 +479,11 @@ emit(cg, "    add x0, x0, x9");
             }
             else if (strcmp(op, "-") == 0) {
                 // left - right: rdi - rax
-                emit(cg, "    sub x0, x9");
+                emit(cg, "    sub x0, x9, x0");
                 emit(cg, "    mov x9, x0");
             }
             else if (strcmp(op, "*") == 0) {
-                emit(cg, "    mul x9, x0");
+                emit(cg, "    mul x9, x9, x0");
             }
             else if (strcmp(op, "/") == 0) {
                 // left / right: rdi / rax
@@ -558,7 +558,7 @@ emit(cg, "    add x0, x0, x9");
             else if (op == '*') {
                 // Dereference: evaluate pointer, then load from that address
                 codegen_expr(cg, node->data.unary_op.operand);
-                emit(cg, "    mov (x0), x0");
+                emit(cg, "    ldr x0, [x0]");
             }
             else {
                 fprintf(stderr, "codegen error: unknown unary op '%c'\n", op);
@@ -624,7 +624,7 @@ emit(cg, "    add x0, x0, x9");
         case AST_INDEX: {
             // array[index] — compute address, then load value
             codegen_lvalue(cg, node);
-            emit(cg, "    mov (x0), x0");
+            emit(cg, "    ldr x0, [x0]");
             break;
         }
 
@@ -641,7 +641,7 @@ emit(cg, "    add x0, x0, x9");
                 // Leave address in rax (struct value — caller will use as address)
             } else {
                 // Scalar field — load the value
-                emit(cg, "    mov (x0), x0");
+                emit(cg, "    ldr x0, [x0]");
             }
             break;
         }
@@ -809,10 +809,10 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
                     // Struct initialization: not handled via simple assignment
                     // (structs don't have direct initializers in our examples)
                     codegen_expr(cg, init);
-                    emit(cg, "    mov x0, %d(x29)", cg->locals[li].offset);
+                    emit(cg, "    str x0, [x29, #%d]", cg->locals[li].offset);
                 } else {
                     codegen_expr(cg, init);
-                    emit(cg, "    mov x0, %d(x29)", cg->locals[li].offset);
+                    emit(cg, "    str x0, [x29, #%d]", cg->locals[li].offset);
                 }
             }
             break;
@@ -831,7 +831,7 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
 
             // Store value at target address
             emit(cg, "    ldr x9, [sp], #16");
-            emit(cg, "    mov x0, (x9)");
+            emit(cg, "    str x0, [x9]");
             break;
         }
 
@@ -1060,7 +1060,7 @@ static void codegen_function(CodeGen *cg, ASTNode *node) {
             // Scalar parameter
             int li = add_local(cg, pname, ptype, pptr, parray, 8);
             if (i < 6) {
-                emit(cg, "    mov %s, %d(x29)", arg_regs[i], cg->locals[li].offset);
+                emit(cg, "    str %s, [x29, #%d]", arg_regs[i], cg->locals[li].offset);
             }
             // TODO: handle args beyond 6 (read from stack above rbp)
         }
