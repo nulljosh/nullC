@@ -19,7 +19,7 @@ _main:
     str x0, [sp, #-16]!
     ldr x0, [x29, #-16]
     ldr x9, [sp], #16
-    mul x9, x9, x0
+    mul x0, x9, x0
     str x0, [x29, #-32]
     ldr x0, [x29, #-24]
     str x0, [sp, #-16]!
@@ -29,10 +29,7 @@ _main:
     str x0, [sp, #-16]!
     mov x0, #2
     ldr x9, [sp], #16
-    mov x0, x12
-    mov x9, x0
-    // cqto (ARM: use sdiv directly)
-    sdiv x0, x0, x12
+    sdiv x0, x9, x0
     str x0, [x29, #-40]
     ldr x0, [x29, #-40]
     mov sp, x29

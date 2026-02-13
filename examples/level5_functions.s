@@ -36,12 +36,11 @@ _multiply:
     str x0, [sp, #-16]!
     ldr x0, [x29, #-16]
     ldr x9, [sp], #16
-    cmp x0, x9
-    setl %al
-    movzbq %al, x0
+    cmp x9, x0
+    cset x0, lt
     cmp x0, #0
     b.eq .L1
-    add x0, x29, -24(x29)
+    add x0, x29, #-24
     str x0, [sp, #-16]!
     ldr x0, [x29, #-24]
     str x0, [sp, #-16]!
@@ -52,7 +51,7 @@ _multiply:
     bl _add
     ldr x9, [sp], #16
     str x0, [x9]
-    add x0, x29, -32(x29)
+    add x0, x29, #-32
     str x0, [sp, #-16]!
     ldr x0, [x29, #-32]
     str x0, [sp, #-16]!

@@ -289,7 +289,7 @@ static void codegen_lvalue(CodeGen *cg, ASTNode *node) {
                         node->data.identifier.name);
                 exit(1);
             }
-            emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+            emit(cg, "    add x0, x29, #%d", cg->locals[li].offset);
             break;
         }
 
@@ -305,7 +305,7 @@ static void codegen_lvalue(CodeGen *cg, ASTNode *node) {
                 if (li >= 0 && cg->locals[li].array_size >= 0) {
                     // Array local: offset points to first element.
                     // Load the address of element 0.
-                    emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+                    emit(cg, "    add x0, x29, #%d", cg->locals[li].offset);
                 } else {
                     // Pointer local: load the pointer value
                     codegen_expr(cg, arr);
@@ -388,7 +388,8 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
 
         case AST_STRING: {
             int lbl = register_string(cg, node->data.string_lit.value);
-            emit(cg, "    add x0, x29, .str%d(%)", lbl);
+            emit(cg, "    adrp x0, .str%d@PAGE", lbl);
+            emit(cg, "    add x0, x0, .str%d@PAGEOFF", lbl);
             break;
         }
 
@@ -409,11 +410,11 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
 
             // If it's an array, return the address of the first element
             if (cg->locals[li].array_size >= 0) {
-                emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+                emit(cg, "    add x0, x29, #%d", cg->locals[li].offset);
             }
             // If it's a struct value, return the address (structs are passed by address)
             else if (local_is_struct_value(cg, li)) {
-                emit(cg, "    add x0, x29, %d(x29)", cg->locals[li].offset);
+                emit(cg, "    add x0, x29, #%d", cg->locals[li].offset);
             }
             else {
                 // Normal scalar: load value
@@ -478,59 +479,47 @@ static void codegen_expr(CodeGen *cg, ASTNode *node) {
 emit(cg, "    add x0, x0, x9");
             }
             else if (strcmp(op, "-") == 0) {
-                // left - right: rdi - rax
+                // left - right: x9 - x0
                 emit(cg, "    sub x0, x9, x0");
-                emit(cg, "    mov x9, x0");
             }
             else if (strcmp(op, "*") == 0) {
-                emit(cg, "    mul x9, x9, x0");
+                // left * right: x9 * x0
+                emit(cg, "    mul x0, x9, x0");
             }
             else if (strcmp(op, "/") == 0) {
-                // left / right: rdi / rax
-                // dividend in rax, divisor in rcx
-                emit(cg, "    mov x0, x12");    // right (divisor) -> rcx
-                emit(cg, "    mov x9, x0");    // left (dividend) -> rax
-                emit(cg, "    // cqto (ARM: use sdiv directly)");                  // sign extend rax -> rdx:rax
-                emit(cg, "    sdiv x0, x0, x12");           // rax = quotient
+                // left / right: x9 / x0
+                emit(cg, "    sdiv x0, x9, x0");
             }
             else if (strcmp(op, "%") == 0) {
-                // left % right: remainder in rdx after idiv
-                emit(cg, "    mov x0, x12");
-                emit(cg, "    mov x9, x0");
-                emit(cg, "    // cqto (ARM: use sdiv directly)");
-                emit(cg, "    sdiv x0, x0, x12");
-                emit(cg, "    mov x11, x0");     // remainder
+                // left % right: x9 % x0
+                // ARM64: remainder = dividend - (quotient * divisor)
+                emit(cg, "    sdiv x10, x9, x0");    // x10 = x9 / x0
+                emit(cg, "    msub x0, x10, x0, x9");  // x0 = x9 - (x10 * x0)
             }
             else if (strcmp(op, "==") == 0) {
-                emit(cg, "    cmp x0, x9");
-                emit(cg, "    sete %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    cmp x9, x0");
+                emit(cg, "    cset x0, eq");
             }
             else if (strcmp(op, "!=") == 0) {
-                emit(cg, "    cmp x0, x9");
-                emit(cg, "    setne %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    cmp x9, x0");
+                emit(cg, "    cset x0, ne");
             }
             else if (strcmp(op, "<") == 0) {
-                // left < right: rdi < rax
-                emit(cg, "    cmp x0, x9");
-                emit(cg, "    setl %%al");
-                emit(cg, "    movzbq %%al, x0");
+                // left < right: x9 < x0
+                emit(cg, "    cmp x9, x0");
+                emit(cg, "    cset x0, lt");
             }
             else if (strcmp(op, ">") == 0) {
-                emit(cg, "    cmp x0, x9");
-                emit(cg, "    setg %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    cmp x9, x0");
+                emit(cg, "    cset x0, gt");
             }
             else if (strcmp(op, "<=") == 0) {
-                emit(cg, "    cmp x0, x9");
-                emit(cg, "    setle %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    cmp x9, x0");
+                emit(cg, "    cset x0, le");
             }
             else if (strcmp(op, ">=") == 0) {
-                emit(cg, "    cmp x0, x9");
-                emit(cg, "    setge %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    cmp x9, x0");
+                emit(cg, "    cset x0, ge");
             }
             else {
                 fprintf(stderr, "codegen error: unknown binary op '%s'\n", op);
@@ -548,8 +537,7 @@ emit(cg, "    add x0, x0, x9");
             else if (op == '!') {
                 codegen_expr(cg, node->data.unary_op.operand);
                 emit(cg, "    cmp x0, #0");
-                emit(cg, "    sete %%al");
-                emit(cg, "    movzbq %%al, x0");
+                emit(cg, "    cset x0, eq");
             }
             else if (op == '&') {
                 // Address-of: get lvalue address
