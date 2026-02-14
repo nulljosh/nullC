@@ -1,13 +1,13 @@
 # nullC Development Notes
 
 ## Current Status (2026-02-13)
-- Lexer: ✓ Complete
-- Parser: ✓ Complete
-- Codegen: ✓ Complete (10/10 levels)
+- Lexer: Complete
+- Parser: Complete
+- Codegen: Complete (10/10 levels)
 - Target: ARM64 (Darwin/macOS)
 
 ## Test Results
-- Level 0-10: ✓ All passing (structs fixed)
+- Level 0-10: All passing (structs fixed)
 
 ## Development Commands
 

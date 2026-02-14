@@ -9,7 +9,7 @@ A minimal C compiler written in C. Educational project.
 **Working:** Lexer, parser, codegen all functional
 
 **Test Results (ARM64):**
-- ✓ Level 0-10: All levels passing (structs with nested members now working)
+- Level 0-10: All levels passing (structs with nested members now working)
 
 **Compilation Pipeline:**
 ```
@@ -45,52 +45,52 @@ done
 
 ### Level 0: Hello World
 Empty main function returning 0
-- **Status**: ✓ Compiles and runs
+- **Status**: Compiles and runs
 
 ### Level 1: Arithmetic
 Basic math operations (+, -, *, /)
-- **Status**: ✓ Returns 48
+- **Status**: Returns 48
 
 ### Level 2: Variables
 Variable declarations and assignments
-- **Status**: ✓ Returns 115
+- **Status**: Returns 115
 
 ### Level 3: Conditionals
 if/else statements, comparison operators
-- **Status**: ✓ Returns 2
+- **Status**: Returns 2
 
 ### Level 4: Loops
 for and while loops, loop control flow
-- **Status**: ✓ Returns 55
+- **Status**: Returns 55
 
 ### Level 5: Functions
 Function definitions, calls with parameters, return values
-- **Status**: ✓ Returns 27
+- **Status**: Returns 27
 
 ### Level 6: Recursion
 Recursive function calls (factorial, fibonacci)
-- **Status**: ✓ Returns 133
+- **Status**: Returns 133
 
 ### Level 7: Pointers & Arrays
 Array indexing, pointer arithmetic
-- **Status**: ✓ Compiles successfully
+- **Status**: Compiles successfully
 
 ### Level 8: Structs
 Struct definitions, nested structs, member access
-- **Status**: ✓ Returns 50
+- **Status**: Returns 50
 
 ### Level 9: Strings
 String manipulation, character arrays
-- **Status**: ✓ Compiles successfully
+- **Status**: Compiles successfully
 
 ### Level 10: Meta-Compiler
 Tokenizer and expression evaluator written in C
-- **Status**: ✓ Compiles successfully (compiler writing a compiler!)
+- **Status**: Compiles successfully (compiler writing a compiler!)
 
 </details>
 
 <details>
-<summary><strong>🔧 Architecture</strong></summary>
+<summary><strong>Architecture</strong></summary>
 
 ### Implementation Phases
 
@@ -146,11 +146,11 @@ This is a no-op (store then load with no useful work between).
 | 3 | Conditionals | 0 |
 | 4 | Loops | 0 |
 | 5 | Functions | 0 |
-| 6 | Recursion | **5** ✓ |
+| 6 | Recursion | **5** |
 | 7 | Pointers | 0 |
-| 8 | Structs | **1** ✓ |
-| 9 | Strings | **1** ✓ |
-| 10 | Meta-Compiler | **3** ✓ |
+| 8 | Structs | **1** |
+| 9 | Strings | **1** |
+| 10 | Meta-Compiler | **3** |
 
 **Total:** 10 redundant instruction pairs removed
 
@@ -176,7 +176,7 @@ This is a **teaching tool**, not a production optimizer.
 </details>
 
 <details>
-<summary><strong>🚀 Optimization Opportunities</strong></summary>
+<summary><strong>Optimization Opportunities</strong></summary>
 
 ### Current State
 - Working compiler, all 10 levels passing
@@ -230,9 +230,9 @@ wc -l examples/level1_arithmetic.s  # Count assembly lines
 ### Why Not Essential
 
 nullC is a learning project. The code is:
-- ✓ Correct (all tests pass)
-- ✓ Readable (easy to understand)
-- ✓ Complete (handles all features)
+- Correct (all tests pass)
+- Readable (easy to understand)
+- Complete (handles all features)
 
 Optimization is educational but not required for the project goals.
 
@@ -341,7 +341,7 @@ ld -o level0_hello examples/level0_hello.o -lSystem -syslibroot `xcrun --show-sd
 
 Compile all 10 complexity levels from C source → working binaries on ARM64 macOS.
 
-**Status:** ✓ Complete (all levels passing)
+**Status:** Complete (all levels passing)
 
 ## Author
 
