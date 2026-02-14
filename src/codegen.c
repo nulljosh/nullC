@@ -17,6 +17,9 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node);
 static void codegen_expr(CodeGen *cg, ASTNode *node);
 static void codegen_lvalue(CodeGen *cg, ASTNode *node);
 static void collect_strings(CodeGen *cg, ASTNode *node);
+static int is_struct_type(const char *type);
+static const char* struct_name_from_type(const char *type);
+static int struct_size(CodeGen *cg, const char *struct_name);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,9 +66,19 @@ static int find_field_offset(CodeGen *cg, const char *struct_name, const char *f
         exit(1);
     }
     StructInfo *s = &cg->structs[si];
+    int offset = 0;
     for (int i = 0; i < s->field_count; i++) {
         if (strcmp(s->field_names[i], field_name) == 0)
-            return i * 8;
+            return offset;
+        
+        // Calculate size of this field and add to offset
+        const char *ftype = s->field_types[i];
+        int field_size = 8; // Default for scalars
+        if (is_struct_type(ftype)) {
+            const char *nested_name = struct_name_from_type(ftype);
+            field_size = struct_size(cg, nested_name);
+        }
+        offset += field_size;
     }
     fprintf(stderr, "codegen error: struct '%s' has no field '%s'\n",
             struct_name, field_name);
@@ -842,12 +855,24 @@ static void codegen_stmt(CodeGen *cg, ASTNode *node) {
             StructInfo *s = &cg->structs[si];
             s->name = strdup(node->data.struct_def.name);
             s->field_count = node->data.struct_def.field_count;
-            s->total_size = s->field_count * 8;
+            
+            // Calculate total size by summing field sizes
+            s->total_size = 0;
             for (int i = 0; i < s->field_count; i++) {
                 s->field_names[i] = strdup(node->data.struct_def.field_names[i]);
                 // Build the full type string, including "struct " prefix if needed
                 // The parser stores field types as-is (e.g. "int", "struct Point")
                 s->field_types[i] = strdup(node->data.struct_def.field_types[i]);
+                
+                // Calculate field size
+                const char *ftype = s->field_types[i];
+                int field_size = 8; // Default for scalars
+                if (is_struct_type(ftype)) {
+                    // Nested struct - look up its size
+                    const char *nested_name = struct_name_from_type(ftype);
+                    field_size = struct_size(cg, nested_name);
+                }
+                s->total_size += field_size;
             }
             break;
         }
@@ -1086,10 +1111,22 @@ static void register_types(CodeGen *cg, ASTNode *program) {
             StructInfo *s = &cg->structs[si];
             s->name = strdup(item->data.struct_def.name);
             s->field_count = item->data.struct_def.field_count;
-            s->total_size = s->field_count * 8;
+            
+            // Calculate total size by summing field sizes
+            s->total_size = 0;
             for (int j = 0; j < s->field_count; j++) {
                 s->field_names[j] = strdup(item->data.struct_def.field_names[j]);
                 s->field_types[j] = strdup(item->data.struct_def.field_types[j]);
+                
+                // Calculate field size
+                const char *ftype = s->field_types[j];
+                int field_size = 8; // Default for scalars
+                if (is_struct_type(ftype)) {
+                    // Nested struct - look up its size
+                    const char *nested_name = struct_name_from_type(ftype);
+                    field_size = struct_size(cg, nested_name);
+                }
+                s->total_size += field_size;
             }
         }
         else if (item->type == AST_ENUM_DEF) {
