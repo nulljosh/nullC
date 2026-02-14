@@ -1037,11 +1037,17 @@ static void codegen_function(CodeGen *cg, ASTNode *node) {
             // Copy struct data from source address (in arg register) to local stack
             if (i < 6) {
                 // Source address is in arg_regs[i]
+                // Save source pointer to x9 if we're using x0 as arg register
+                if (i == 0) {
+                    emit(cg, "    mov x9, x0");
+                }
+                const char *src_reg = (i == 0) ? "x9" : arg_regs[i];
+                
                 // Use a loop to copy 8 bytes at a time
                 int nfields = ssz / 8;
                 for (int f = 0; f < nfields; f++) {
-                    emit(cg, "    mov %d(%s), x0", f * 8, arg_regs[i]);
-                    emit(cg, "    mov x0, %d(x29)", cg->locals[li].offset + f * 8);
+                    emit(cg, "    ldr x0, [%s, #%d]", src_reg, f * 8);
+                    emit(cg, "    str x0, [x29, #%d]", cg->locals[li].offset + f * 8);
                 }
             }
         } else {

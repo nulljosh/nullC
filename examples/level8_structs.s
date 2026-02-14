@@ -5,10 +5,11 @@ _calculate_area:
     stp x29, x30, [sp, #-16]!
     mov x29, sp
     sub sp, sp, #32
-    mov 0(x0), x0
-    mov x0, -16(x29)
-    mov 8(x0), x0
-    mov x0, -8(x29)
+    mov x9, x0
+    ldr x0, [x9, #0]
+    str x0, [x29, #-16]
+    ldr x0, [x9, #8]
+    str x0, [x29, #-8]
     add x0, x29, #-16
     add x0, x0, #8
     ldr x0, [x0]
