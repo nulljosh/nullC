@@ -41,7 +41,7 @@ done
 ```
 
 <details>
-<summary><strong>📚 Complexity Levels</strong></summary>
+<summary><strong>Complexity Levels</strong></summary>
 
 ### Level 0: Hello World
 Empty main function returning 0
@@ -123,7 +123,7 @@ Tokenizer and expression evaluator written in C
 </details>
 
 <details>
-<summary><strong>⚡ Peephole Optimization</strong></summary>
+<summary><strong>Peephole Optimization</strong></summary>
 
 ### What It Does
 Removes redundant instruction pairs from generated ARM64 assembly.
@@ -251,7 +251,7 @@ Peephole optimization is perfect:
 </details>
 
 <details>
-<summary><strong>📖 Example Programs</strong></summary>
+<summary><strong>Example Programs</strong></summary>
 
 ### Level 0: Hello World
 ```c
@@ -304,7 +304,7 @@ See `examples/` directory for full programs.
 </details>
 
 <details>
-<summary><strong>🏗️ Build System</strong></summary>
+<summary><strong>Build System</strong></summary>
 
 ### Makefile
 ```bash
