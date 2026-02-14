@@ -8,9 +8,7 @@ A minimal C compiler written in C. Educational project.
 **Working:** Lexer, parser, codegen all functional
 
 **Test Results (ARM64):**
-- ✓ Level 0-7: Basic programs through recursion and pointers
-- ✗ Level 8: Structs (in progress)
-- ✓ Level 9-10: Strings and meta-compiler
+- ✓ Level 0-10: All levels passing (structs with nested members now working)
 
 **Compilation Pipeline:**
 C source → Lexer → Parser → AST → ARM64 Assembly → Binary

@@ -45,7 +45,7 @@
 - Struct definitions
 - Nested structs
 - Member access
-- **Status**: ✗ Assembly errors (in progress)
+- **Status**: ✓ Returns 50 (correct)
 
 ### Level 9: Strings
 - String manipulation
