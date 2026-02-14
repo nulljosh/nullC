@@ -1,5 +1,6 @@
 .section __TEXT,__text
 
+
 .globl _is_digit
 _is_digit:
     stp x29, x30, [sp, #-16]!
@@ -34,6 +35,7 @@ _is_digit:
     mov sp, x29
     ldp x29, x30, [sp], #16
     ret
+
 
 .globl _next_token
 _next_token:
@@ -120,8 +122,6 @@ _next_token:
     ret
 .L7:
     ldr x0, [x29, #-40]
-    str x0, [sp, #-16]!
-    ldr x0, [sp], #16
     bl _is_digit
     cmp x0, #0
     b.eq .L9
@@ -145,8 +145,6 @@ _next_token:
     ldr x9, [sp], #16
     add x0, x0, x9
     ldr x0, [x0]
-    str x0, [sp, #-16]!
-    ldr x0, [sp], #16
     bl _is_digit
     cmp x0, #0
     b.eq .L11
@@ -274,6 +272,7 @@ _next_token:
     mov sp, x29
     ldp x29, x30, [sp], #16
     ret
+
 
 .globl _evaluate
 _evaluate:
@@ -428,6 +427,7 @@ _evaluate:
     ldp x29, x30, [sp], #16
     ret
 
+
 .globl _main
 _main:
     stp x29, x30, [sp, #-16]!
@@ -544,8 +544,6 @@ _main:
     ldr x9, [sp], #16
     str x0, [x9]
     add x0, x29, #-160
-    str x0, [sp, #-16]!
-    ldr x0, [sp], #16
     bl _evaluate
     mov sp, x29
     ldp x29, x30, [sp], #16
@@ -554,4 +552,5 @@ _main:
     mov sp, x29
     ldp x29, x30, [sp], #16
     ret
+
 

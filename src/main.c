@@ -108,6 +108,22 @@ int main(int argc, char **argv) {
         printf("Generated: %s\n", asm_file);
     }
 
+    // Run peephole optimization
+    char optimized_asm[256];
+    snprintf(optimized_asm, sizeof(optimized_asm), "%s.opt", asm_file);
+    char peephole_cmd[512];
+    snprintf(peephole_cmd, sizeof(peephole_cmd), "./peephole %s %s 2>&1", asm_file, optimized_asm);
+    system(peephole_cmd);
+    
+    // Use optimized assembly if it exists
+    FILE *opt_check = fopen(optimized_asm, "r");
+    if (opt_check) {
+        fclose(opt_check);
+        // Replace original with optimized
+        snprintf(peephole_cmd, sizeof(peephole_cmd), "mv %s %s", optimized_asm, asm_file);
+        system(peephole_cmd);
+    }
+
     if (!asm_only) {
         // Assemble and link
         char bin_name[256];
